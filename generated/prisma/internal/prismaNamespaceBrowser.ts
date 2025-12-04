@@ -49,7 +49,7 @@ export const AnyNull = runtime.objectEnumValues.instances.AnyNull
 
 
 export const ModelName = {
-  Note: 'Note'
+  note: 'note'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
