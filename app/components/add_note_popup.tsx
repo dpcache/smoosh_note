@@ -1,52 +1,61 @@
 "use client";
-import { useState } from "react";
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import DialogContentText from "@mui/material/DialogContentText";
-import DialogActions from "@mui/material/DialogActions";
-import Button from "@mui/material/Button";
-import TextField from "@mui/material/TextField";
-
+import { useState, useEffect, useRef } from "react";
+import {
+  Dialog,
+  TextField,
+  IconButton,
+  CircularProgress,
+  Box,
+} from "@mui/material";
+import CloseIcon from '@mui/icons-material/Close';
+import { Note } from "../interfaces/note_model";
 
 export type AddNotePopupProps = {
   open: boolean;
   onClose: () => void;
-  title?: string;
-  content?: string;
+  note?: Note;
 };
 
-
-export default function AddNotePopup({
-  open,
-  onClose,
-  title = "Add Note",
-  content = "This is a popup triggered by clicking the + card.",
-}: AddNotePopupProps) {
-  const [noteTitle, setNoteTitle] = useState("");
-  const [noteContent, setNoteContent] = useState("");
+export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps) {
+  const [noteTitle, setNoteTitle] = useState(note?.title || "");
+  const [noteContent, setNoteContent] = useState(note?.content || "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleSave = async () => {
-    if (!noteTitle || !noteContent) {
-      setError("Title and Note are required.");
-      return;
+  const prevTitleRef = useRef(noteTitle);
+  const prevContentRef = useRef(noteContent);
+
+  useEffect(() => {
+    if (open) {
+      setNoteTitle(note?.title || "");
+      setNoteContent(note?.content || "");
+      setError(null);
+      prevTitleRef.current = note?.title || "";
+      prevContentRef.current = note?.content || "";
     }
+  }, [open, note]);
+
+  const handleSave = async () => {
+    if (!noteTitle || !noteContent) return;
 
     setLoading(true);
     setError(null);
 
     try {
-      const res = await fetch("/api/notes", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: noteTitle,
-          content: noteContent,
-        }),
+      const endpoint = "/api/notes";
+      const method = note?.id ? "PUT" : "POST";
+
+      const payload: Partial<Note> = {
+        id: note?.id,
+        title: noteTitle,
+        content: noteContent,
+        archived: note?.archived ?? false,
+      };
+
+      const res = await fetch(endpoint, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
@@ -54,12 +63,8 @@ export default function AddNotePopup({
         throw new Error(data.error || "Failed to save note");
       }
 
-      // Optionally clear the form
-      setNoteTitle("");
-      setNoteContent("");
-
-      // Close the dialog
-      onClose();
+      prevTitleRef.current = noteTitle;
+      prevContentRef.current = noteContent;
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -67,44 +72,82 @@ export default function AddNotePopup({
     }
   };
 
+  // Debounce auto-save
+  useEffect(() => {
+    if (
+      noteTitle === prevTitleRef.current &&
+      noteContent === prevContentRef.current
+    ) {
+      return;
+    }
+
+    setLoading(true);
+    const handler = setTimeout(() => {
+      handleSave();
+    }, 800);
+
+    return () => clearTimeout(handler);
+  }, [noteTitle, noteContent]);
+
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
+      <Box sx={{ p: 3, position: "relative" }}>
+        {/* Spinner at top-right */}
+        {loading && (
+          <CircularProgress
+            size={20}
+            sx={{ position: "absolute", top: 16, right: 16, zIndex: 1 }}
+          />
+        )}
 
-      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, mt: 1 }}>
-        <DialogContentText sx={{ mb: 1 }}>{content}</DialogContentText>
+        {/* Close "X" button at top-right */}
+        <IconButton
+          onClick={onClose}
+          sx={{
+            position: "absolute",
+            top: 12,
+            right: 12,
+            zIndex: 2,
+            padding: 0.5,
+          }}
+        >
+          <CloseIcon fontSize="small" />
+        </IconButton>
 
-        {/* Title input */}
+        {/* Inputs */}
         <TextField
-          label="Title"
-          variant="outlined"
+          placeholder="Title"
+          variant="standard"
           fullWidth
           value={noteTitle}
           onChange={(e) => setNoteTitle(e.target.value)}
+          sx={{
+            mb: 2,
+            "& .MuiInput-underline:before, & .MuiInput-underline:after": {
+              borderBottom: "none",
+            },
+            fontWeight: "bold",
+            fontSize: "1.1rem",
+          }}
         />
-
-        {/* Note textarea */}
         <TextField
-          label="Note"
-          variant="outlined"
+          placeholder="Write your note..."
+          variant="standard"
           fullWidth
           multiline
           minRows={4}
           value={noteContent}
           onChange={(e) => setNoteContent(e.target.value)}
+          sx={{
+            mb: 2,
+            "& .MuiInput-underline:before, & .MuiInput-underline:after": {
+              borderBottom: "none",
+            },
+          }}
         />
 
-        {error && <p style={{ color: "red" }}>{error}</p>}
-      </DialogContent>
-
-      <DialogActions>
-        <Button onClick={onClose} disabled={loading}>
-          Close
-        </Button>
-        <Button variant="contained" onClick={handleSave} disabled={loading}>
-          {loading ? "Saving..." : "Save"}
-        </Button>
-      </DialogActions>
+        {error && <Box sx={{ color: "error.main", mt: 1 }}>{error}</Box>}
+      </Box>
     </Dialog>
   );
 }

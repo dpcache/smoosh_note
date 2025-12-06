@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "./components/notification_provider";
+import { WSProvider } from "./components/ws_context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -29,7 +30,9 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <NotificationProvider>
-          {children}
+          <WSProvider>
+            {children}
+          </WSProvider>
         </NotificationProvider>
       </body>
     </html>
