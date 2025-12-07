@@ -14,10 +14,12 @@ export const WSProvider = ({ children }: { children: React.ReactNode }) => {
   const ws = WSManager.getInstance();
 
   const subscribe = (callback: (data: { operation: string; note: Note }) => void) => {
+    console.log("subscribe")
     ws.addListener(callback);
   };
 
   const unsubscribe = (callback: (data: { operation: string; note: Note }) => void) => {
+    console.log("unsubscribe")
     ws.removeListener(callback);
   };
 

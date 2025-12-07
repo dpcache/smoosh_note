@@ -7,7 +7,7 @@ import {
   CircularProgress,
   Box,
 } from "@mui/material";
-import CloseIcon from '@mui/icons-material/Close';
+import CloseIcon from "@mui/icons-material/Close";
 import { Note } from "../interfaces/note_model";
 
 export type AddNotePopupProps = {
@@ -22,33 +22,45 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const prevTitleRef = useRef(noteTitle);
-  const prevContentRef = useRef(noteContent);
+  // NEW: Track runtime-created note ID so POST happens only once
+  const [createdNoteId, setCreatedNoteId] = useState<number | null>(null);
+
+  const prevTitleRef = useRef("");
+  const prevContentRef = useRef("");
 
   useEffect(() => {
     if (open) {
       setNoteTitle(note?.title || "");
       setNoteContent(note?.content || "");
       setError(null);
+
       prevTitleRef.current = note?.title || "";
       prevContentRef.current = note?.content || "";
+
+      // Reset created runtime id
+      setCreatedNoteId(null);
     }
   }, [open, note]);
 
   const handleSave = async () => {
-    if (!noteTitle || !noteContent) return;
+    if (!noteTitle && !noteContent) return;
 
     setLoading(true);
     setError(null);
 
     try {
+      const isEditingOriginal = !!note?.id;
+      const isEditingCreated = createdNoteId !== null;
+
+      const method =
+        isEditingOriginal || isEditingCreated ? "PUT" : "POST";
+
       const endpoint = "/api/notes";
-      const method = note?.id ? "PUT" : "POST";
 
       const payload: Partial<Note> = {
-        id: note?.id,
-        title: noteTitle,
-        content: noteContent,
+        id: isEditingOriginal ? note!.id : createdNoteId ?? undefined,
+        title: noteTitle ?? "",
+        content: noteContent ?? "",
         archived: note?.archived ?? false,
       };
 
@@ -63,6 +75,12 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
         throw new Error(data.error || "Failed to save note");
       }
 
+      const savedNote: Note = await res.json();
+
+      if (method === "POST") {
+        setCreatedNoteId(savedNote.id);
+      }
+
       prevTitleRef.current = noteTitle;
       prevContentRef.current = noteContent;
     } catch (err: any) {
@@ -74,6 +92,7 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
 
   // Debounce auto-save
   useEffect(() => {
+    if (!open) return; 
     if (
       noteTitle === prevTitleRef.current &&
       noteContent === prevContentRef.current
@@ -84,15 +103,14 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
     setLoading(true);
     const handler = setTimeout(() => {
       handleSave();
-    }, 800);
+    }, 600);
 
     return () => clearTimeout(handler);
-  }, [noteTitle, noteContent]);
+  }, [noteTitle, noteContent, open]);
 
   return (
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <Box sx={{ p: 3, position: "relative" }}>
-        {/* Spinner at top-right */}
         {loading && (
           <CircularProgress
             size={20}
@@ -100,7 +118,6 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
           />
         )}
 
-        {/* Close "X" button at top-right */}
         <IconButton
           onClick={onClose}
           sx={{
@@ -114,7 +131,6 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
           <CloseIcon fontSize="small" />
         </IconButton>
 
-        {/* Inputs */}
         <TextField
           placeholder="Title"
           variant="standard"
@@ -130,6 +146,7 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
             fontSize: "1.1rem",
           }}
         />
+
         <TextField
           placeholder="Write your note..."
           variant="standard"
@@ -139,7 +156,6 @@ export default function AddNotePopup({ open, onClose, note }: AddNotePopupProps)
           value={noteContent}
           onChange={(e) => setNoteContent(e.target.value)}
           sx={{
-            mb: 2,
             "& .MuiInput-underline:before, & .MuiInput-underline:after": {
               borderBottom: "none",
             },

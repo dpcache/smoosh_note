@@ -6,16 +6,39 @@ export async function GET(req: NextRequest) {
   try {
     const url = new URL(req.url);
     const archivedParam = url.searchParams.get("archived");
+    const searchQuery = url.searchParams.get("q")?.trim() ?? "";
+    const lastIdParam = url.searchParams.get("lastId");
+    const limitParam = url.searchParams.get("limit");
 
-    // Default to false (non-archived notes)
-    const archived = archivedParam === "true" ? true : false;
+    const limit = limitParam ? parseInt(limitParam) : 20;
+    const fetchLimit = limit + 1;
 
-    const notes = await prisma.note.findMany({
-      where: { archived },
-      orderBy: { updatedAt: "desc" },
+    const archived = archivedParam === "true";
+    const lastId = lastIdParam ? parseInt(lastIdParam) : 0;
+
+    const whereClause: any = { archived };
+    if (lastId) whereClause.id = { gt: lastId };
+
+    if (searchQuery) {
+      whereClause.OR = [
+        { title: { contains: searchQuery, mode: "insensitive" } },
+        { content: { contains: searchQuery, mode: "insensitive" } },
+      ];
+    }
+
+    // Fetch notes sorted by creation date descending
+    let notes = await prisma.note.findMany({
+      where: whereClause,
+      orderBy: [
+        { createdAt: "desc" },
+        { id: "desc" },
+      ],
     });
 
-    return NextResponse.json(notes);
+    const hasMore = notes.length > limit;
+    if (hasMore) notes = notes.slice(0, limit);
+
+    return NextResponse.json({ notes, hasMore });
   } catch (error) {
     console.error("GET /api/notes failed:", error);
     return NextResponse.json(
@@ -29,38 +52,113 @@ export async function GET(req: NextRequest) {
 // POST /api/notes → create new note
 export async function POST(req: NextRequest) {
   try {
-    const { title, content } = await req.json();
+    let { title, content } = await req.json();
 
-    if (!title || !content) {
-      return NextResponse.json({ error: "Title and content required" }, { status: 400 });
+    // Normalize nullish values
+    title = title ?? "";
+    content = content ?? "";
+
+    // Character limit config
+    const TITLE_LIMIT = 200;
+    const CONTENT_LIMIT = 1000;
+
+    // Basic validation
+    if (!title && !content) {
+      return NextResponse.json(
+        { error: "Title or content required" },
+        { status: 400 }
+      );
     }
 
+    // Character limit validation
+    if (title.length > TITLE_LIMIT) {
+      return NextResponse.json(
+        { error: `Title exceeds ${TITLE_LIMIT} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (content.length > CONTENT_LIMIT) {
+      return NextResponse.json(
+        { error: `Content exceeds ${CONTENT_LIMIT} characters` },
+        { status: 400 }
+      );
+    }
+
+    // Create note
     const note = await prisma.note.create({
       data: { title, content },
     });
+
     return NextResponse.json(note, { status: 201 });
   } catch (error) {
-    return NextResponse.json({ error: "Failed to create note" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to create note" },
+      { status: 500 }
+    );
   }
 }
 
+
 // PUT /api/notes/:id → update note
 export async function PUT(req: NextRequest) {
-
   try {
-    const { id, title, content } = await req.json();
-    if (!id || !title || !content) {
-      return NextResponse.json({ error: "ID, title, and content required" }, { status: 400 });
+    let { id, title, content } = await req.json();
+
+    // ID is required
+    if (!id) {
+      return NextResponse.json(
+        { error: "ID is required" },
+        { status: 400 }
+      );
     }
 
+    // Normalize null/undefined fields
+    title = title ?? "";
+    content = content ?? "";
+
+    // Character limit config
+    const TITLE_LIMIT = 200;
+    const CONTENT_LIMIT = 10_000;
+
+    // Ensure at least one field is not completely empty
+    if (!title && !content) {
+      return NextResponse.json(
+        { error: "Title or content required" },
+        { status: 400 }
+      );
+    }
+
+    // Character limit validation
+    if (title.length > TITLE_LIMIT) {
+      return NextResponse.json(
+        { error: `Title exceeds ${TITLE_LIMIT} characters` },
+        { status: 400 }
+      );
+    }
+
+    if (content.length > CONTENT_LIMIT) {
+      return NextResponse.json(
+        { error: `Content exceeds ${CONTENT_LIMIT} characters` },
+        { status: 400 }
+      );
+    }
+
+    // Update
     const note = await prisma.note.update({
       where: { id: Number(id) },
-      data: { title, content },
+      data: {
+        title,
+        content,
+      },
     });
 
     return NextResponse.json(note);
   } catch (error) {
-    return NextResponse.json({ error: "Failed to update note" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Failed to update note" },
+      { status: 500 }
+    );
   }
 }
 

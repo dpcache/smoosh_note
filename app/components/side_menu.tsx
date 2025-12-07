@@ -20,10 +20,14 @@ export default function SideMenu({ onSelect, selected }: SideMenuProps) {
         position: "fixed",
         top: 0,
         left: 0,
+        display: "flex",
+        flexDirection: "column",
       }}
     >
-      <List>
+      {/* Spacer to push icons below AppBar */}
+      <Box sx={{ height: "64px" }} />
 
+      <List>
         {/* Notes */}
         <ListItemButton
           selected={selected === "notes"}
@@ -45,7 +49,6 @@ export default function SideMenu({ onSelect, selected }: SideMenuProps) {
           </ListItemIcon>
           <ListItemText primary="Trash" />
         </ListItemButton>
-
       </List>
     </Box>
   );
