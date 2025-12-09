@@ -59,8 +59,8 @@ export async function POST(req: NextRequest) {
     content = content ?? "";
 
     // Character limit config
-    const TITLE_LIMIT = 200;
-    const CONTENT_LIMIT = 1000;
+    const TITLE_LIMIT = 50;
+    const CONTENT_LIMIT = 255;
 
     // Basic validation
     if (!title && !content) {
@@ -118,8 +118,8 @@ export async function PUT(req: NextRequest) {
     content = content ?? "";
 
     // Character limit config
-    const TITLE_LIMIT = 200;
-    const CONTENT_LIMIT = 10_000;
+    const TITLE_LIMIT = 50;
+    const CONTENT_LIMIT = 255;
 
     // Ensure at least one field is not completely empty
     if (!title && !content) {

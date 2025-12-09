@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next"
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { NotificationProvider } from "./components/notification_provider";
@@ -32,6 +33,7 @@ export default function RootLayout({
         <NotificationProvider>
           <WSProvider>
             {children}
+            <Analytics />
           </WSProvider>
         </NotificationProvider>
       </body>

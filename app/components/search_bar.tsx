@@ -1,14 +1,15 @@
 "use client";
-import { TextField, Box } from "@mui/material";
+import { TextField, Box, InputAdornment, CircularProgress } from "@mui/material";
 
 
 interface SearchBarProps {
   query: string;
   onChange: (value: string) => void;
+  loading?: boolean;
 }
 
 
-export default function SearchBar({ query, onChange }: SearchBarProps) {
+export default function SearchBar({ query, onChange, loading }: SearchBarProps) {
   return (
     <Box sx={{ mb: 3 }}>
       <TextField
@@ -17,6 +18,13 @@ export default function SearchBar({ query, onChange }: SearchBarProps) {
         variant="outlined"
         value={query}
         onChange={(e) => onChange(e.target.value)}
+        InputProps={{
+          endAdornment: loading ? (
+            <InputAdornment position="end">
+              <CircularProgress size={20} />
+            </InputAdornment>
+          ) : null,
+        }}
       />
     </Box>
   );

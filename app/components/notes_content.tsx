@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Box, Grid, Button } from "@mui/material";
 import PlusCard from "./add_note_card";
 import NoteCard from "./note_card";
@@ -20,9 +20,12 @@ export default function NotesContent({ archived }: NotesContentProps) {
   const { showNotification } = useNotification();
   const { subscribe, unsubscribe } = useWS();
   const [search, setSearch] = useState("");
+  const prevSearch = useRef<string>("");
+  const [loading, setLoading] = useState(false);
 
   const fetchNotes = async (query: string = "", loadMore = false) => {
     try {
+
       const url = new URL("/api/notes", location.origin);
       url.searchParams.set("limit", "20");
       url.searchParams.set("archived", archived ? "true" : "false");
@@ -111,13 +114,25 @@ export default function NotesContent({ archived }: NotesContentProps) {
 
     subscribe(listener);
     return () => unsubscribe(listener);
-  }, [subscribe, unsubscribe, search, archived]);
+  }, [subscribe, unsubscribe]);
 
   useEffect(() => {
+    // If previous search was empty, skip this fetch
+    if (prevSearch.current === "") {
+      prevSearch.current = search;
+      return;
+    }
+
+    setLoading(true);
+
     const handler = setTimeout(() => {
       setLastId(0);
       fetchNotes(search);
-    }, 800);
+      setLoading(false);
+    }, 600);
+
+    // Update previous search for next run
+    prevSearch.current = search;
 
     return () => clearTimeout(handler);
   }, [search, archived]);
@@ -125,7 +140,7 @@ export default function NotesContent({ archived }: NotesContentProps) {
   return (
     <Box sx={{ maxWidth: 1000, mx: "auto", p: 3 }}>
       <Box sx={{ maxWidth: 800, mx: "auto", p: 3 }}>
-        <SearchBar query={search} onChange={setSearch} />
+        <SearchBar query={search} onChange={setSearch} loading={loading} />
       </Box>
 
       <Grid container spacing={3} justifyContent="center">
