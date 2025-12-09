@@ -5,10 +5,9 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client"
-  output   = "../generated/prisma"
+  provider = "prisma-client-js"
+  output = "./client"
   binaryTargets = ["native", "rhel-openssl-3.0.x"]
-  engineType = "client"
 }
 
 datasource db {
@@ -16,7 +15,7 @@ datasource db {
   url = env("DATABASE_URL")
 }
 
-model note {
+model note {S
   id        Int      @id @default(autoincrement())
   title     String
   content   String
