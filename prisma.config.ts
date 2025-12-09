@@ -4,7 +4,7 @@ import "dotenv/config";
 import dotenv from "dotenv";
 import { defineConfig, env } from "prisma/config";
 
-if (!process.env.VERCEL) {
+if (!process.env.POSTGRES_URL) {
   dotenv.config({ path: ".env" });
 }
 
@@ -14,6 +14,6 @@ export default defineConfig({
     path: "prisma/migrations",
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.POSTGRES_URL ?? env("DATABASE_URL"),
   },
 });

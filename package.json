@@ -14,7 +14,6 @@
     "@mui/icons-material": "^7.3.5",
     "@mui/material": "^7.3.5",
     "@prisma/client": "^6.19.0",
-    "@prisma/nextjs-monorepo-workaround-plugin": "^7.1.0",
     "@vercel/analytics": "^1.6.1",
     "next": "^16.0.7",
     "pg": "^8.16.3",
